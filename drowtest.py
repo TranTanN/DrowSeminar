@@ -3,6 +3,12 @@ from imutils import face_utils
 import imutils
 import dlib
 import cv2
+import os
+
+wav_path = "C:\Drow\alarm.wav"
+
+def play_sound(path):
+    	os.system('aplay ' + path)
 
 def eye_aspect_ratio(eye):
 	A = distance.euclidean(eye[1], eye[5])
