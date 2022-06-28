@@ -1,3 +1,5 @@
+from numpy import pi
+from picamera2 import Picamera2
 from scipy.spatial import distance
 from imutils import face_utils
 import imutils
@@ -5,10 +7,10 @@ import dlib
 import cv2
 import os
 
-wav_path = "C:\Drow\alarm.wav"
+#wav_path = "C:\Drow\alarm.wav"
 
-def play_sound(path):
-    	os.system('aplay ' + path)
+#def play_sound(path):
+#    	os.system('aplay ' + path)
 
 def eye_aspect_ratio(eye):
 	A = distance.euclidean(eye[1], eye[5])
@@ -21,16 +23,22 @@ thresh = 0.25
 frame_check = 20
 detect = dlib.get_frontal_face_detector()
 predict = dlib.shape_predictor("C:\Drow\shape_predictor_68_face_landmarks.dat")
+cv2.startWindowThread()
 
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["left_eye"]
 (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["right_eye"]
-cap=cv2.VideoCapture(0)
+
+picam2 = Picamera2()
+picam2.configure(picam2.preview_configuration(main={"format": 'XRGB8888', "size": (640, 480)}))
+picam2.start()
+
 flag=0
 while True:
-	ret, frame=cap.read()
-	frame = imutils.resize(frame, width=450)
-	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+	im = picam2.capture_array()
+
+	gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
 	subjects = detect(gray, 0)
+	
 	for subject in subjects:
 		shape = predict(gray, subject)
 		shape = face_utils.shape_to_np(shape)#converting to NumPy Array
@@ -41,22 +49,21 @@ while True:
 		ear = (leftEAR + rightEAR) / 2.0
 		leftEyeHull = cv2.convexHull(leftEye)
 		rightEyeHull = cv2.convexHull(rightEye)
-		cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
-		cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(im, [leftEyeHull], -1, (0, 255, 0), 1)
+		cv2.drawContours(im, [rightEyeHull], -1, (0, 255, 0), 1)
 		if ear < thresh:
 			flag += 1
 			print (flag)
 			if flag >= frame_check:
-				cv2.putText(frame, "CANH BAO NGU GAT", (10, 30),
+				cv2.putText(im, "CANH BAO NGU GAT", (10, 30),
 					cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-				cv2.putText(frame, "CANH BAO NGU GAT", (10,325),
+				cv2.putText(im, "CANH BAO NGU GAT", (10,325),
 					cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 				#print ("Drowsy")
 		else:
 			flag = 0
-	cv2.imshow("Frame", frame)
+	cv2.imshow("Camera", im)
 	key = cv2.waitKey(1) & 0xFF
 	if key == ord("q"):
 		break
 cv2.destroyAllWindows()
-cap.stop()
